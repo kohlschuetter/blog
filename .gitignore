@@ -1,0 +1,5 @@
+/work
+.*.swp
+*~
+/var/run/*.pid
+.DS_Store
