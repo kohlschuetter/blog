@@ -1,0 +1,819 @@
+<!DOCTYPE html><html lang="en" data-mode="light" xmlns:og="http://opengraphprotocol.org/schema/"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><meta name="generator" content="Jekyll v4.2.2" /><meta property="og:title" content="Faster Reed-Solomon Erasure Coding in Java with Go &amp; FFM" /><meta name="author" content="kohlschuetter" /><meta property="og:locale" content="en" /><meta name="description" content="Backblaze’s Java-based Reed-Solomon Erasure Coding library is great tech, but comparatively slow. Let’s add some optimized Go, and get a whopping speedup." /><meta property="og:description" content="Backblaze’s Java-based Reed-Solomon Erasure Coding library is great tech, but comparatively slow. Let’s add some optimized Go, and get a whopping speedup." /><link rel="canonical" href="https://kohlschuetter.github.io/blog/posts/2025/08/11/jagors/" /><meta property="og:url" content="/blog/posts/2025/08/11/jagors/" /><meta property="og:site_name" content="Dr. Christian Kohlschütter" /><meta property="og:type" content="article" /><meta property="article:published_time" content="2025-08-11T17:00:00+02:00" /><meta name="twitter:card" content="summary" /><meta name="twitter:title" content="Faster Reed-Solomon Erasure Coding in Java with Go &amp; FFM" /><meta name="twitter:site" content="@kohlschuetter" /><meta name="twitter:creator" content="@kohlschuetter" /> <script type="application/ld+json"> {"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"kohlschuetter"},"dateModified":"2025-08-11T17:00:00+02:00","datePublished":"2025-08-11T17:00:00+02:00","description":"Backblaze’s Java-based Reed-Solomon Erasure Coding library is great tech, but comparatively slow. Let’s add some optimized Go, and get a whopping speedup.","headline":"Faster Reed-Solomon Erasure Coding in Java with Go &amp; FFM","mainEntityOfPage":{"@type":"WebPage","@id":"/blog/posts/2025/08/11/jagors/"},"url":"/blog/posts/2025/08/11/jagors/"}</script><title>Faster Reed-Solomon Erasure Coding in Java with Go & FFM | Dr. Christian Kohlschütter</title><link rel="apple-touch-icon" sizes="180x180" href="/blog/assets/img/favicons/apple-touch-icon.png"><link rel="icon" type="image/png" sizes="32x32" href="/blog/assets/img/favicons/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/blog/assets/img/favicons/favicon-16x16.png"><link rel="manifest" href="/blog/assets/img/favicons/site.webmanifest"><link rel="shortcut icon" href="/blog/assets/img/favicons/favicon.ico"><meta name="apple-mobile-web-app-title" content="Dr. Christian Kohlschütter"><meta name="application-name" content="Dr. Christian Kohlschütter"><meta name="msapplication-TileColor" content="#da532c"><meta name="msapplication-config" content="/blog/assets/img/favicons/browserconfig.xml"><meta name="theme-color" content="#ffffff"><link rel="stylesheet" href="/blog/assets/lib/fonts/main.css"><link rel="stylesheet" href="/blog/assets/lib/bootstrap-4.6.1/bootstrap.min.css"><link rel="stylesheet" href="/blog/assets/lib/fontawesome-free-5.15.4/css/all.min.css"><link rel="stylesheet" href="/blog/assets/css/style.css"><link rel="stylesheet" href="/blog/assets/lib/bootstrap-toc-1.0.1/bootstrap-toc.min.css"><link rel="stylesheet" href="/blog/assets/lib/magnific-popup-1.1.0/magnific-popup.css"> <script src="/blog/assets/lib/jquery-3.6.0/jquery.min.js"></script><body data-spy="scroll" data-target="#toc" data-topbar-visible="true"><div id="sidebar" class="d-flex flex-column align-items-end"><div class="profile-wrapper text-center"><div id="no-avatar" style="height:10pt"></div><div class="site-title mt-3"> <a href="/blog/">Dr. Christian Kohlschütter</a></div><div class="site-subtitle font-italic">Life is a search.<br/>I build the tools.</div><div id="after-subtitle" style="height:50pt"></div></div><ul class="w-100"><li class="nav-item"> <a href="/blog/" class="nav-link"> <i class="fa-fw fas fa-home ml-xl-3 mr-xl-3 unloaded"></i> <span>HOME</span> </a><li class="nav-item"> <a href="/blog/categories/" class="nav-link"> <i class="fa-fw fas fa-stream ml-xl-3 mr-xl-3 unloaded"></i> <span>CATEGORIES</span> </a><li class="nav-item"> <a href="/blog/tags/" class="nav-link"> <i class="fa-fw fas fa-tag ml-xl-3 mr-xl-3 unloaded"></i> <span>TAGS</span> </a><li class="nav-item"> <a href="/blog/archives/" class="nav-link"> <i class="fa-fw fas fa-archive ml-xl-3 mr-xl-3 unloaded"></i> <span>ARCHIVES</span> </a><li class="nav-item"> <a href="/blog/about/" class="nav-link"> <i class="fa-fw fas fa-info-circle ml-xl-3 mr-xl-3 unloaded"></i> <span>ABOUT</span> </a></ul><div class="sidebar-bottom mt-auto d-flex flex-wrap justify-content-center align-items-center"> <a href="https://github.com/kohlschutter" aria-label="github" target="_blank" rel="noopener"> <i class="fab fa-github"></i> </a> <a href="https://twitter.com/kohlschuetter" aria-label="twitter" target="_blank" rel="noopener"> <i class="fab fa-twitter"></i> </a> <a href=" javascript:location.href = 'mailto:' + ['christian','kohlschutter.com'].join('@')" aria-label="email" > <i class="fas fa-envelope"></i> </a> <a href="/blog/feed.xml" aria-label="rss" > <i class="fas fa-rss"></i> </a> <a href="" aria-label="linkedin" target="_blank" rel="noopener"> <i class="fab fa-linkedin"></i> </a></div></div><div id="topbar-wrapper"><div id="topbar" class="container d-flex align-items-center justify-content-between h-100 pl-3 pr-3 pl-md-4 pr-md-4"> <span id="breadcrumb"> <span> <a href="/blog/"> Home </a> </span> <span>Faster Reed-Solomon Erasure Coding in Java with Go & FFM</span> </span> <i id="sidebar-trigger" class="fas fa-bars fa-fw"></i><div id="topbar-title"> Dr. Christian Kohlschütter</div><i id="search-trigger" class="fas fa-search fa-fw"></i> <span id="search-wrapper" class="align-items-center"> <i class="fas fa-search fa-fw"></i> <input class="form-control" id="search-input" type="search" aria-label="search" autocomplete="off" placeholder="Search..."> </span> <span id="search-cancel" >Cancel</span></div></div><div id="main-wrapper" class="d-flex justify-content-center"><div id="main" class="container pl-xl-4 pr-xl-4"><div class="row"><div id="core-wrapper" class="col-12 col-lg-11 col-xl-9 pr-xl-4" role="main"><div class="post pl-1 pr-1 pl-md-2 pr-md-2"><h1 data-toc-skip>Faster Reed-Solomon Erasure Coding in Java with Go & FFM</h1><div class="post-meta text-muted"> <span> Posted <em class="" data-ts="1754924400" data-df="ll" data-toggle="tooltip" data-placement="bottom"> Aug 11, 2025 </em> </span><div class="d-flex justify-content-between"> <span> By <em> Christian Kohlschütter </em> </span><div> <span class="readtime" data-toggle="tooltip" data-placement="bottom" title="4913 words"> <em>27 min</em> read</span></div></div></div><div class="post-content"><p>In this tutorial, you will learn how to run Go code from the JVM for fun and profit.</p><h1 id="error-correction-for-the-masses">Error Correction for the Masses</h1><p>In 2015, Backblaze released <a href="https://github.com/backblaze/JavaReedSolomon/">JavaReedSolomon</a>, their Reed-Solomon Erasure Coding library as open source, representing the first production-quality Java implementation of this <a href="https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction">error-correcting code</a>.</p><p>Without repeating too much of <a href="https://www.backblaze.com/blog/reed-solomon/">Backblaze’s explanation</a> of how they work, in a nutshell, Reed-Solomon can be used to detect and recover multiple errors in a byte sequence:</p><p>The byte sequence is first split into equal parts (<em>data shards</em>), and then extended by a fixed number of additional “checksum” data (<em>parity shards</em>). While making the byte sequence slightly longer, thanks to some clever math the Reed-Solomon code needs much fewer bytes than just duplicating the data multiple times.</p><p>No wonder Backblaze uses this approach for their backup solution, it’s certainly saving them a lot of money on harddisk space.</p><p><em>JavaReedSolomon</em> is great tech, but it feels it could be faster — I’m barely getting 1000 MB/s throughput on my trusty MacBook Pro M1 Max.</p><p>These numbers may be good enough when contrasting single harddisk speeds (200 MB/s), but can certainly become a bottleneck when working with multiple devices accessed concurrently (a typical use case), even more so with SSDs, which churn out over 15,000 MB/s these days.</p><p>Also consult <a href="https://rurban.github.io/smhasher/doc/table.html">smhasher</a> to get a feeling how fast hash functions (a related operation) can be in comparison — many modern implementations achieve 40,000 MB/s and more.</p><h1 id="give-performance-a-go">Give performance a Go</h1><p>Is it that Reed-Solomon inherently is slow? No. Have a look at Klaus Post’s <a href="https://github.com/klauspost/reedsolomon">Go reimplementation</a>!</p><p>For the same configuration as in Backblaze’s demo code (17 data shards + 3 parity shards, payload size 200k bytes), I observed 12222 MB/s, a 12x speedup. When using Klaus’ default payload size of 10 MB, I observed 47178 MB/s, a 47x speedup over JavaReedSolomon.</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>git clone https://github.com/klauspost/reedsolomon.git
+<span class="c"># git checkout v1.12.5</span>
+<span class="nv">$ </span><span class="nb">cd</span> ./benchmark
+<span class="nv">$ </span>go build main.go
+
+<span class="nv">$ </span>./main <span class="nt">-k</span> 17 <span class="nt">-m</span> 3 <span class="nt">-size</span> <span class="k">$((</span> <span class="m">10</span> <span class="o">*</span> <span class="m">1024</span> <span class="o">*</span> <span class="m">1024</span> <span class="k">))</span>
+Benchmarking 1 block<span class="o">(</span>s<span class="o">)</span> of 17 data <span class="o">(</span>K<span class="o">)</span> and 3 parity shards <span class="o">(</span>M<span class="o">)</span>, each 616810 bytes using 16 threads. Total 12336200 bytes.
+
+ <span class="k">*</span> Encoded 462000 MiB <span class="k">in </span>10s. Speed: 46199.18 MiB/s <span class="o">(</span>17+3:616810<span class="o">)</span>
+ <span class="k">*</span> Repaired 551165 MiB <span class="k">in </span>10s. Speed: 55116.19 MiB/s <span class="o">(</span>17+3:616810<span class="o">)</span>
+</pre></table></code></div></div><h1 id="cpu-features">CPU Features</h1><p>How can that be! Is Go just so much faster than Java?</p><p>The answer is no. It’s mostly because Klaus’ code is superior for modern CPUs (but there’s also some discrepancy in what we measure, we’ll get to that later on).</p><p>While a lot of his implementation is in vanilla Go, Klaus heavily uses <a href="https://blog.klauspost.com/blazingly-fast-reed-solomon-coding/">optimized assembly code</a> with operations for modern vector extensions such as <a href="https://en.wikipedia.org/wiki/ARM_architecture_family#Advanced_SIMD_(NEON)">NEON</a> (as on my M1), <a href="https://en.wikipedia.org/wiki/AArch64#Scalable_Vector_Extension_(SVE)">SVE</a>, and <a href="https://en.wikipedia.org/wiki/Advanced_Vector_Extensions">AVX</a> (including <a href="https://en.wikipedia.org/wiki/AVX-512#CPUs_with_AVX-512">AVX512</a>). And the benchmarks are running multithreaded by default.</p><p>But even with only 1 CPU core it’s still an 11x speedup over the Java implementation. One can’t easily beat hand-optimized SIMD assembly.</p><p>In an apples-to-apples comparison — no assembly optimizations and just 1 core — Go gives us speeds comparable to the Java implementation: 1061 MB/s (4% faster) for a payload of 200k and 680 MB/s for a payload of 10MB (33% slower than JavaReedSolomon).</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+</pre><td class="rouge-code"><pre><span class="nv">$ </span><span class="nb">cd</span> ./benchmark
+<span class="nv">$ </span>go build <span class="nt">-o</span> main-noasm <span class="nt">-tags</span> noasm main.go
+<span class="nv">$ </span>./main-noasm <span class="nt">-k</span> 17 <span class="nt">-m</span> 3 <span class="nt">-cpu</span> 1
+Benchmarking 1 block<span class="o">(</span>s<span class="o">)</span> of 17 data <span class="o">(</span>K<span class="o">)</span> and 3 parity shards <span class="o">(</span>M<span class="o">)</span>, each 616810 bytes using 1 threads. Total 12336200 bytes.
+
+ <span class="k">*</span> Encoded 6800 MiB <span class="k">in </span>10.006s. Speed: 679.59 MiB/s <span class="o">(</span>17+3:616810<span class="o">)</span>
+ <span class="k">*</span> Repaired 12400 MiB <span class="k">in </span>10s. Speed: 1239.96 MiB/s <span class="o">(</span>17+3:616810<span class="o">)</span>
+</pre></table></code></div></div><p>Surprisingly, when running JavaReedSolomon running multithreaded on all my Mac’s cylinders, it beat the no-assembly Go version slightly for 10 MB payloads (7556 MB/s vs. 7154 MB/s, 5% faster), and significantly for 200k payloads (7864 MB/s vs. 1033 MB/s = 7.6x).</p><p>With the findings above, it seems that the Go version – at least its benchmark app – performs worse with larger payloads, but generally the same or worse than Backblaze’s Java version when no special assembly optimization is involved.</p><p>This means Go is no magic bullet. However it’s also troubling because there’s so much room for improvement in Backblaze’s Java implementation.</p><p>I’m no expert at all when it comes to using modern CPU assembly. For that, <a href="https://lemire.me/blog/">Daniel Lemire’s blog</a> is always a great read when it comes to SIMD, AVX-512 and NEON tricks.</p><p>I also admit that I’m not well-versed in optimizing Matrix computations, maybe apart from that fun excursion into the <a href="https://citeseerx.ist.psu.edu/document?repid=rep1&amp;type=pdf&amp;doi=1c561cec0aab132de6a7da8ba8adc2ec34cebe05">Efficient Parallel Computation of PageRank</a> 20 years ago. Alas, today I couldn’t even explain you off the top of my head how to multiply two matrices, let alone how to work with <a href="https://content.sakai.rutgers.edu/access/content/user/ak892/Digital%20Communication%20Systems">Galois fields</a>, which are underlying the Reed Solomon code.</p><h1 id="use-it-from-java">Use it from Java</h1><p>In other words, I really just want to get the assembly fast-path working from Java, without building it from scratch. So what can we do?</p><p>To some, it may be obvious, to some surprising. In the end, our Reed-Solomon functions will likely run as yet another part of some POSIX process in Linux or macOS. At which point the language choice is irrelevant — as long as we can call into the Reed-Solomon implementation code from our application (which in this article we assume is written in Java, running in some Java VM that is also just a part of some POSIX process).</p><p>It comes in handy that Java has had, for a long time already, a good way to interact with “native” code (with <em>native</em> referring to code in a shared library): <a href="https://www.baeldung.com/jni">JNI</a>. More recently, in Java 24, the <a href="https://dev.java/learn/ffm/"><em>Foreign Function and Memory API</em> (FFM)</a> has been promoted from a preview to a production-quality feature, adding long-awaited memory safety measures among other convenient improvements.</p><p>So, as long as we can craft a shared library from the Go code (a “libsomething.so” on Linux or “libsomething.dylib” on macOS, perhaps a “smthng64.dll” on Windows), we will be able to call it from Java. Thankfully, Go has a specific “c-shared” build mode just for that purpose, and we’re going to leverage it.</p><h2 id="shim-gålore"><span class="mr-2">Shim gålore</span><a href="#shim-gålore" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>In practice, dynamic libraries expose a binary interface that is compatible with the C calling conventions, which are also what Java expects when using JNI or FFM.</p><p>Since regular Go code usually isn’t designed with that in mind, we have to add helper functions acting as a shims, converting between simple types like integers, char pointers, etc. and the more involved Go types.</p><p>While the CGo package is often used to call C code from Go, we can also have it the other way around. For that, we create a new Go file, which we place in a new sub-directory of our “reedsolomon” Go project that we checked out above. Let’s use the acronym “jagors” (Java-Go-Reed-Solomon) for brevity (./jagors/jagors.go):</p><div class="language-go highlighter-rouge"><div class="code-header"> <span data-label-text="Go"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+</pre><td class="rouge-code"><pre><span class="k">package</span> <span class="n">main</span>
+
+<span class="k">import</span> <span class="p">(</span>
+    <span class="s">"C"</span> <span class="c">// CGo</span>
+    <span class="s">"unsafe"</span> <span class="c">// for pointers</span>
+    <span class="s">"github.com/klauspost/reedsolomon"</span> <span class="c">// the Go code (in the parent directory)</span>
+<span class="p">)</span>
+
+<span class="k">func</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c">// no-op, required by the go compiler</span>
+<span class="p">}</span>
+</pre></table></code></div></div><p>Let’s try and build our shared library for the first time:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>go build <span class="nt">-o</span> libjagors.dylib <span class="nt">-buildmode</span><span class="o">=</span>c-shared ./jagors.go
+./jagors.go:5:5: <span class="s2">"unsafe"</span> imported and not used
+./jagors.go:6:5: <span class="s2">"github.com/klauspost/reedsolomon"</span> imported and not used
+</pre></table></code></div></div><p>Sadly, Go is very pedantic about unused imports and variables, and apparently cannot be convinced to be more lenient. Let’s comment these imports out for now (leaving only “C”) and try again:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>go build <span class="nt">-o</span> libjagors.dylib <span class="nt">-buildmode</span><span class="o">=</span>c-shared ./jagors.go
+
+<span class="nv">$ </span>file libjagors.dylib
+libjagors.dylib: Mach-O 64-bit dynamically linked shared library arm64
+</pre></table></code></div></div><p>Now we have to add the shim methods that are exposed in the dynamic library. Note that there is no special namespace, so let’s make sure that the function name is globally unique. We also have to add the very function name in a special comment before the declaration, which Go interprets as an annotation (do not add whitespace between <code class="language-plaintext highlighter-rouge">//</code> and `export”, Go is not forgiving here either). Let’s start with a simple example:</p><div class="language-go highlighter-rouge"><div class="code-header"> <span data-label-text="Go"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="c">//export jagors_hello_world</span>
+<span class="k">func</span> <span class="n">jagors_hello_world</span><span class="p">(</span><span class="n">input</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">input</span> <span class="o">+</span> <span class="m">333</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></table></code></div></div><p>Compiling the library again, we now see that <code class="language-plaintext highlighter-rouge">go</code> created a C header file for us in the same directory, <code class="language-plaintext highlighter-rouge">libjagors.h</code>, containing the following C declaration (among some boilerplate):</p><div class="language-c highlighter-rouge"><div class="code-header"> <span data-label-text="C"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre><td class="rouge-code"><pre><span class="k">extern</span> <span class="kt">int</span> <span class="nf">jagors_hello_world</span><span class="p">(</span><span class="kt">int</span> <span class="n">input</span><span class="p">);</span>
+</pre></table></code></div></div><p>Let’s quickly test if we can call our code from C. Create a file <code class="language-plaintext highlighter-rouge">test.c</code> with the following contents:</p><div class="language-c highlighter-rouge"><div class="code-header"> <span data-label-text="C"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+</pre><td class="rouge-code"><pre><span class="cp">#include</span> <span class="cpf">"libjagors.h"</span><span class="cp">
+#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">printf</span><span class="p">(</span><span class="s">"%i</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">jagors_hello_world</span><span class="p">(</span><span class="mi">123</span><span class="p">));</span>
+	<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></table></code></div></div><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>clang <span class="nt">-I</span><span class="nb">.</span> <span class="nt">-L</span><span class="nb">.</span> <span class="nt">-ljagors</span> <span class="nt">-o</span> <span class="nb">test </span>test.c
+<span class="nv">$ </span>./test
+456
+</pre></table></code></div></div><p>Great, that works. Now let’s see what we need to do on the Java side.</p><p>Tradionally, with JNI you would have to build another, JNI-specific shared library that would again link our Go-built “libjagors.dylib”. In 2025, and with Java 24, we can surely use FFM instead.</p><p>While (for some unexplicable reason) not yet being part of the Java JDK, <a href="https://dev.java/learn/ffm/jextract/">jextract</a> makes it easy to create shim code for the Java side:</p><div class="language-bash highlighter-rouge"><div class="code-header"> <span data-label-text="Shell"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre><td class="rouge-code"><pre><span class="nv">$ </span>jextract <span class="nt">-t</span> org.example.ffm libjagors.h
+
+<span class="nv">$ </span>find org/ <span class="nt">-type</span> f
+org/example/ffm/GoSlice.java
+org/example/ffm/GoInterface.java
+org/example/ffm/libjagors_h.java
+org/example/ffm/_GoString_.java
+org/example/ffm/GoString.java
+
+</pre></table></code></div></div><p>Just like <code class="language-plaintext highlighter-rouge">go build -buildmode=c-shared</code> created a C header <code class="language-plaintext highlighter-rouge">libjagors.h</code>, <code class="language-plaintext highlighter-rouge">jextract</code> created Java code, containing (again among some boilerplate) the following method:</p><div class="language-java highlighter-rouge"><div class="code-header"> <span data-label-text="Java"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+</pre><td class="rouge-code"><pre><span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">jagors_hello_world</span><span class="o">(</span><span class="kt">int</span> <span class="n">input</span><span class="o">)</span>
+</pre></table></code></div></div><p>Let’s see if we can call our code from Java. Create a file <code class="language-plaintext highlighter-rouge">Test.java</code> with the following contents:</p><div class="language-java highlighter-rouge"><div class="code-header"> <span data-label-text="Java"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre><td class="rouge-code"><pre><span class="kn">import</span> <span class="nn">java.io.File</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.example.ffm.libjagors_h</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">Test</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">load</span><span class="o">(</span><span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">"./libjagors.dylib"</span><span class="o">).</span><span class="na">getAbsolutePath</span><span class="o">());</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">libjagors_h</span><span class="o">.</span><span class="na">jagors_hello_world</span><span class="o">(</span><span class="mi">123</span><span class="o">));</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</pre></table></code></div></div><p>then compile and run it (the enable-native-access option suppresses a warning):</p><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="Plaintext"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre>$ javac Test.java
+$ java --enable-native-access=ALL-UNNAMED Test
+456
+</pre></table></code></div></div><p>Success!</p><h2 id="java-calling"><span class="mr-2">Java calling</span><a href="#java-calling" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>Now that we’re able to run trivial Go code from Java, we can look into the Go code specific to <em>reedsolomon</em>.</p><p>Thankfully, Klaus has thoroughly documented <a href="https://github.com/klauspost/reedsolomon/blob/v1.12.5/reedsolomon.go">reedsolomon.go</a> and also provided example code (<a href="https://github.com/klauspost/reedsolomon/blob/v1.12.5/examples/simple-encoder.go">simple-encoder.go</a> and <a href="https://github.com/klauspost/reedsolomon/blob/v1.12.5/examples/simple-decoder.go">simple-decoder.go</a>).</p><p>The API expects us to create a new <code class="language-plaintext highlighter-rouge">enc reedsolomon</code> object with the required number of data and parity shards, and then call <code class="language-plaintext highlighter-rouge">enc.Encode</code> (for encoding) and <code class="language-plaintext highlighter-rouge">enc.Verify</code>/<code class="language-plaintext highlighter-rouge">enc.Reconstruct</code> (for decoding) with an array of byte arrays, one byte array for each shard. Except for <code class="language-plaintext highlighter-rouge">Reconstruct</code> the byte arrays must all be of the same length.</p><p>For <code class="language-plaintext highlighter-rouge">Reconstruct</code>, it is acceptable that some shards are missing — that’s the whole point of error correction. The documentation states that these missing shards should either be marked as <code class="language-plaintext highlighter-rouge">nil</code> byte arrays or be Go “slices” of length 0 with a capacity that is equal to the length of the other shards (in Java terminology, these would be <code class="language-plaintext highlighter-rouge">ByteBuffers</code> with a <em>limit</em> of 0 and sufficient capacity).</p><p>From a C perspective, we will probably want to pass a <code class="language-plaintext highlighter-rouge">char *</code> (or <code class="language-plaintext highlighter-rouge">void *</code>) pointing to a contiguous buffer containing all shards (data and parity), which will be updated as required (for <code class="language-plaintext highlighter-rouge">Encode</code> the parity shards will be written, for <code class="language-plaintext highlighter-rouge">Reconstruct</code> the missing shards will be updated).</p><p>While we can directly map a <code class="language-plaintext highlighter-rouge">char *</code> to a Go <code class="language-plaintext highlighter-rouge">[]byte</code> being directly backed by the underlying storage, arrays of byte arrays cannot be simply mapped to <code class="language-plaintext highlighter-rouge">char **</code>. This means we need to allocate the array containing the shards’ byte arrays with the Go allocator, and then get a bit creative with unsafe pointer arithmetic:</p><div class="language-go highlighter-rouge"><div class="code-header"> <span data-label-text="Go"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+</pre><td class="rouge-code"><pre><span class="k">func</span> <span class="n">bufToShards</span><span class="p">(</span><span class="n">buf</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">,</span> <span class="n">payloadWidth</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">,</span> <span class="n">numShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">([][]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">var</span> <span class="n">shards</span> <span class="p">[][]</span><span class="kt">byte</span> <span class="o">=</span> <span class="nb">make</span><span class="p">([][]</span><span class="kt">byte</span><span class="p">,</span> <span class="n">numShards</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="o">:=</span> <span class="k">range</span> <span class="n">shards</span> <span class="p">{</span>
+        <span class="k">var</span> <span class="n">ptr</span> <span class="o">=</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Add</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">i</span> <span class="o">*</span> <span class="kt">int</span><span class="p">(</span><span class="n">payloadWidth</span><span class="p">));</span>
+        <span class="n">shards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="m">1</span> <span class="o">&lt;&lt;</span> <span class="m">28</span><span class="p">]</span><span class="kt">byte</span><span class="p">)(</span><span class="n">ptr</span><span class="p">)[</span><span class="o">:</span><span class="n">payloadWidth</span><span class="o">:</span><span class="n">payloadWidth</span><span class="p">]</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">shards</span>
+<span class="p">}</span>
+</pre></table></code></div></div><p>The weird statement <code class="language-plaintext highlighter-rouge">(*[1 &lt;&lt; 28]byte)(ptr)[:payloadWidth:payloadWidth]</code> casts a sequence of bytes starting from <code class="language-plaintext highlighter-rouge">ptr</code> (which we calculated in the line above) to a byte array slice with length and capacity equal to the payload size (hat-tip to Sanchke Dellowar for <a href="https://stackoverflow.com/questions/65514142/proper-way-to-write-to-c-memory-from-go">providing this solution on Stack Overflow</a>). <code class="language-plaintext highlighter-rouge">1 &lt;&lt; 28</code> is just a large constant, guaranteed to be larger than our payload.</p><p>We can now create our <em>encode</em> shim. We’ll skip precise error handling for now, just returning <code class="language-plaintext highlighter-rouge">1</code> for success and <code class="language-plaintext highlighter-rouge">0</code> for failure:</p><div class="language-go highlighter-rouge"><div class="code-header"> <span data-label-text="Go"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+</pre><td class="rouge-code"><pre><span class="c">//export jagors_encode</span>
+<span class="k">func</span> <span class="n">jagors_encode</span><span class="p">(</span><span class="n">buf</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">,</span> <span class="n">payloadWidth</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">,</span> <span class="n">numDataShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">,</span> <span class="n">numParityShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">var</span> <span class="n">shards</span> <span class="o">=</span> <span class="n">bufToShards</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">payloadWidth</span><span class="p">,</span> <span class="n">numDataShards</span> <span class="o">+</span> <span class="n">numParityShards</span><span class="p">)</span>
+    <span class="k">var</span> <span class="n">enc</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">reedsolomon</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="kt">int</span><span class="p">(</span><span class="n">numDataShards</span><span class="p">),</span> <span class="kt">int</span><span class="p">(</span><span class="n">numParityShards</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="m">0</span>
+    <span class="p">}</span>
+    
+    <span class="n">err</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">Encode</span><span class="p">(</span><span class="n">shards</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="m">0</span>
+    <span class="p">}</span>
+    
+    <span class="k">return</span> <span class="m">1</span>
+<span class="p">}</span>
+</pre></table></code></div></div><p>For the <em>decode</em> shim, we need a way to specify which shards are missing — we cannot just have them be zeroes. Let’s pass another <code class="language-plaintext highlighter-rouge">char *</code> with marker bytes (one per shard):</p><div class="language-go highlighter-rouge"><div class="code-header"> <span data-label-text="Go"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+</pre><td class="rouge-code"><pre><span class="c">//export jagors_decode</span>
+<span class="k">func</span> <span class="n">jagors_decode</span><span class="p">(</span><span class="n">buf</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">,</span> <span class="n">payloadWidth</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">,</span> <span class="n">numDataShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">,</span> <span class="n">numParityShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">,</span> <span class="n">shardsMissing</span> <span class="o">*</span><span class="n">C</span><span class="o">.</span><span class="n">char</span><span class="p">)</span> <span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">var</span> <span class="n">numShards</span> <span class="o">=</span> <span class="n">numDataShards</span> <span class="o">+</span> <span class="n">numParityShards</span>
+    <span class="k">var</span> <span class="n">shards</span> <span class="o">=</span> <span class="n">bufToShards</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">payloadWidth</span><span class="p">,</span> <span class="n">numShards</span><span class="p">)</span>
+
+    <span class="k">var</span> <span class="n">enc</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">reedsolomon</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="kt">int</span><span class="p">(</span><span class="n">numDataShards</span><span class="p">),</span> <span class="kt">int</span><span class="p">(</span><span class="n">numParityShards</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="m">0</span>
+    <span class="p">}</span>
+    
+    <span class="k">var</span> <span class="n">ok</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">Verify</span><span class="p">(</span><span class="n">shards</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ok</span> <span class="p">{</span>
+        <span class="c">// no reconstruction required</span>
+        <span class="k">return</span> <span class="m">1</span>
+    <span class="p">}</span>
+    
+    <span class="n">markMissingShards</span><span class="p">(</span><span class="n">shards</span><span class="p">,</span> <span class="n">shardsMissing</span><span class="p">,</span> <span class="n">numShards</span><span class="p">)</span>
+
+    <span class="n">err</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">Reconstruct</span><span class="p">(</span><span class="n">shards</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="c">// reconstruction failed</span>
+        <span class="k">return</span> <span class="m">0</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="m">1</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">func</span> <span class="n">markMissingShards</span><span class="p">(</span><span class="n">shards</span> <span class="p">[][]</span><span class="kt">byte</span><span class="p">,</span> <span class="n">shardsMissing</span> <span class="o">*</span><span class="n">C</span><span class="o">.</span><span class="n">char</span><span class="p">,</span> <span class="n">numShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">var</span> <span class="n">missing</span> <span class="o">=</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Slice</span><span class="p">(</span><span class="n">shardsMissing</span><span class="p">,</span> <span class="n">numShards</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">v</span> <span class="o">:=</span> <span class="k">range</span> <span class="n">missing</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="o">!=</span> <span class="m">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c">// trim size but keep capacity</span>
+            <span class="n">shards</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">shards</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="o">:</span><span class="m">0</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></table></code></div></div><p>Compile your code with <code class="language-plaintext highlighter-rouge">go build</code> and <code class="language-plaintext highlighter-rouge">jextract</code> as above, so we can complete the Java side of things (you must also add back the imports we previously removed).</p><p><code class="language-plaintext highlighter-rouge">jextract</code> now provides the following additional methods in <code class="language-plaintext highlighter-rouge">libjagors_h.java</code>:</p><div class="language-java highlighter-rouge"><div class="code-header"> <span data-label-text="Java"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre><td class="rouge-code"><pre><span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">jagors_encode</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">buf</span><span class="o">,</span> <span class="kt">int</span> <span class="n">payloadWidth</span><span class="o">,</span> <span class="kt">int</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="kt">int</span> <span class="n">numParityShards</span><span class="o">);</span>
+
+<span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">jagors_decode</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">buf</span><span class="o">,</span> <span class="kt">int</span> <span class="n">payloadWidth</span><span class="o">,</span> <span class="kt">int</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="kt">int</span> <span class="n">numParityShards</span><span class="o">,</span> <span class="nc">MemorySegment</span> <span class="n">shardsMissing</span><span class="o">);</span>
+</pre></table></code></div></div><p>As you can see, both <code class="language-plaintext highlighter-rouge">unsafe.Pointer</code> (<code class="language-plaintext highlighter-rouge">void *</code> in C) and <code class="language-plaintext highlighter-rouge">*C.char</code> (<code class="language-plaintext highlighter-rouge">char *</code> in C) are <code class="language-plaintext highlighter-rouge">MemorySegment</code>s in Java.</p><p>This leaves us with the actual code exercising the Reed-Solomon code. For this tutorial, I’ll keep it simple and work with a payload of 4 bytes using 6 data shards and 3 parity shards.</p><div class="language-java highlighter-rouge"><div class="code-header"> <span data-label-text="Java"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+</pre><td class="rouge-code"><pre><span class="kn">import</span> <span class="nn">java.io.File</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.lang.foreign.Arena</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.lang.foreign.MemorySegment</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.lang.foreign.ValueLayout</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Arrays</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.util.Random</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.example.ffm.libjagors_h</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">ReedSolomonTest</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="nc">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">Exception</span> <span class="o">{</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">load</span><span class="o">(</span><span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">"./libjagors.dylib"</span><span class="o">).</span><span class="na">getAbsolutePath</span><span class="o">());</span>
+    
+    <span class="c1">// use Arena.ofAuto() without a try-clause for GC-controlled memory management</span>
+    <span class="k">try</span> <span class="o">(</span><span class="nc">Arena</span> <span class="n">arena</span> <span class="o">=</span> <span class="nc">Arena</span><span class="o">.</span><span class="na">ofConfined</span><span class="o">())</span> <span class="o">{</span>
+    
+      <span class="kt">int</span> <span class="n">numDataShards</span> <span class="o">=</span> <span class="mi">6</span><span class="o">;</span>
+      <span class="kt">int</span> <span class="n">numParityShards</span> <span class="o">=</span> <span class="mi">3</span><span class="o">;</span>
+      <span class="kt">int</span> <span class="n">payloadSize</span> <span class="o">=</span> <span class="mi">4</span><span class="o">;</span>
+
+      <span class="kt">int</span> <span class="n">numTotalShards</span> <span class="o">=</span> <span class="n">numDataShards</span> <span class="o">+</span> <span class="n">numParityShards</span><span class="o">;</span>
+
+      <span class="c1">// Allocate working memory</span>
+      <span class="nc">MemorySegment</span> <span class="n">buf</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="n">payloadSize</span> <span class="o">*</span> <span class="n">numTotalShards</span><span class="o">);</span>
+
+      <span class="c1">// Populate data shards with example data and print all shards for demonstration purposes</span>
+      <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Filling data shards with random data..."</span><span class="o">);</span>
+      <span class="nc">Random</span> <span class="n">random</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">Random</span><span class="o">();</span>
+      <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="o">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">payloadSize</span> <span class="o">*</span> <span class="n">numDataShards</span><span class="o">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="o">;</span> <span class="n">i</span><span class="o">++)</span> <span class="o">{</span>
+        <span class="n">buf</span><span class="o">.</span><span class="na">setAtIndex</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="n">i</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span> <span class="n">random</span><span class="o">.</span><span class="na">nextInt</span><span class="o">());</span>
+      <span class="o">}</span>
+
+      <span class="n">dumpShards</span><span class="o">(</span><span class="n">buf</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="n">numParityShards</span><span class="o">);</span>
+
+      <span class="c1">// Encode the parity shards</span>
+      <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Encoding..."</span><span class="o">);</span>
+      <span class="kt">int</span> <span class="n">rc</span> <span class="o">=</span> <span class="n">libjagors_h</span><span class="o">.</span><span class="na">jagors_encode</span><span class="o">(</span><span class="n">buf</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="n">numParityShards</span><span class="o">);</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">rc</span> <span class="o">!=</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">err</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Encoding failed!"</span><span class="o">);</span>
+      <span class="o">}</span>
+
+      <span class="n">dumpShards</span><span class="o">(</span><span class="n">buf</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="n">numParityShards</span><span class="o">);</span>
+
+      <span class="c1">// Corrupt some data</span>
+      <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Marking some shards damaged/missing..."</span><span class="o">);</span>
+      <span class="nc">MemorySegment</span> <span class="n">damagedShard3</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="n">payloadSize</span> <span class="o">*</span> <span class="mi">3</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">);</span>
+      <span class="n">damagedShard3</span><span class="o">.</span><span class="na">fill</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span> <span class="mi">0</span><span class="o">);</span>
+      <span class="nc">MemorySegment</span> <span class="n">damagedShard8</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="n">payloadSize</span> <span class="o">*</span> <span class="mi">8</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">);</span>
+      <span class="n">damagedShard8</span><span class="o">.</span><span class="na">fill</span><span class="o">((</span><span class="kt">byte</span><span class="o">)</span> <span class="mi">0</span><span class="o">);</span>
+      
+      <span class="c1">// Mark damaged/missing shards</span>
+      <span class="nc">MemorySegment</span> <span class="n">missingShards</span> <span class="o">=</span> <span class="n">arena</span><span class="o">.</span><span class="na">allocate</span><span class="o">(</span><span class="n">numTotalShards</span><span class="o">);</span>
+      <span class="n">missingShards</span><span class="o">.</span><span class="na">setAtIndex</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span> <span class="mi">1</span><span class="o">);</span>
+      <span class="n">missingShards</span><span class="o">.</span><span class="na">setAtIndex</span><span class="o">(</span><span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">,</span> <span class="mi">8</span><span class="o">,</span> <span class="o">(</span><span class="kt">byte</span><span class="o">)</span> <span class="mi">1</span><span class="o">);</span>
+
+      <span class="n">dumpShards</span><span class="o">(</span><span class="n">buf</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="n">numParityShards</span><span class="o">);</span>
+
+      <span class="c1">// Recover</span>
+      <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Decoding..."</span><span class="o">);</span>
+      <span class="n">rc</span> <span class="o">=</span> <span class="n">libjagors_h</span><span class="o">.</span><span class="na">jagors_decode</span><span class="o">(</span><span class="n">buf</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="n">numParityShards</span><span class="o">,</span>
+          <span class="n">missingShards</span><span class="o">);</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">rc</span> <span class="o">!=</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+        <span class="nc">System</span><span class="o">.</span><span class="na">err</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Decoding failed!"</span><span class="o">);</span>
+      <span class="o">}</span>
+
+      <span class="n">dumpShards</span><span class="o">(</span><span class="n">buf</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="n">numParityShards</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  
+  <span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">dumpShards</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">buf</span><span class="o">,</span> <span class="kt">int</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="kt">int</span> <span class="n">numDataShards</span><span class="o">,</span>
+      <span class="kt">int</span> <span class="n">numParityShards</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">for</span> <span class="o">(</span><span class="kt">int</span> <span class="n">shard</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span> <span class="n">shard</span> <span class="o">&lt;</span> <span class="o">(</span><span class="n">numDataShards</span> <span class="o">+</span> <span class="n">numParityShards</span><span class="o">);</span> <span class="n">shard</span><span class="o">++)</span> <span class="o">{</span>
+      <span class="nc">MemorySegment</span> <span class="n">shardBuf</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="na">asSlice</span><span class="o">(</span><span class="n">shard</span> <span class="o">*</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">);</span>
+      <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Shard "</span> <span class="o">+</span> <span class="n">shard</span> <span class="o">+</span> <span class="s">": "</span> <span class="o">+</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">toString</span><span class="o">(</span><span class="n">shardBuf</span><span class="o">.</span><span class="na">toArray</span><span class="o">(</span>
+          <span class="nc">ValueLayout</span><span class="o">.</span><span class="na">JAVA_BYTE</span><span class="o">)));</span>
+    <span class="o">}</span>
+    <span class="nc">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">();</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</pre></table></code></div></div><p>Compile ReedSolomonTest.java, run, and you will see it works:</p><div class="language-plaintext highlighter-rouge"><div class="code-header"> <span data-label-text="Plaintext"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+</pre><td class="rouge-code"><pre>Filling data shards with random data...
+Shard 0: [72, -90, -77, 78]
+Shard 1: [-58, 74, -52, 47]
+Shard 2: [48, -10, 23, 64]
+Shard 3: [-85, 50, 91, -82]
+Shard 4: [-110, -72, -71, 75]
+Shard 5: [-122, -18, -36, -74]
+Shard 6: [0, 0, 0, 0]
+Shard 7: [0, 0, 0, 0]
+Shard 8: [0, 0, 0, 0]
+
+Encoding...
+Shard 0: [72, -90, -77, 78]
+Shard 1: [-58, 74, -52, 47]
+Shard 2: [48, -10, 23, 64]
+Shard 3: [-85, 50, 91, -82]
+Shard 4: [-110, -72, -71, 75]
+Shard 5: [-122, -18, -36, -74]
+Shard 6: [-105, 33, -27, 102]
+Shard 7: [-106, 95, -77, 20]
+Shard 8: [-61, -14, -68, 61]
+
+Marking some shards damaged/missing...
+Shard 0: [72, -90, -77, 78]
+Shard 1: [-58, 74, -52, 47]
+Shard 2: [48, -10, 23, 64]
+Shard 3: [0, 0, 0, 0]
+Shard 4: [-110, -72, -71, 75]
+Shard 5: [-122, -18, -36, -74]
+Shard 6: [-105, 33, -27, 102]
+Shard 7: [-106, 95, -77, 20]
+Shard 8: [0, 0, 0, 0]
+
+Decoding...
+Shard 0: [72, -90, -77, 78]
+Shard 1: [-58, 74, -52, 47]
+Shard 2: [48, -10, 23, 64]
+Shard 3: [-85, 50, 91, -82]
+Shard 4: [-110, -72, -71, 75]
+Shard 5: [-122, -18, -36, -74]
+Shard 6: [-105, 33, -27, 102]
+Shard 7: [-106, 95, -77, 20]
+Shard 8: [-61, -14, -68, 61]
+</pre></table></code></div></div><h2 id="making-it-stateful"><span class="mr-2">Making it stateful</span><a href="#making-it-stateful" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>While this does work, we’re still creating new <code class="language-plaintext highlighter-rouge">enc reedsolomon</code> classes for every call to encode/decode. This overhead is not much in this case but not insignificant, and we can certainly make the code feel a bit more like Java/Go than C, exposing the <code class="language-plaintext highlighter-rouge">reedsolomon</code> type with encode/decode methods instead of having individual functions. It’s just a bit tricky because of Go’s Garbage Collector…</p><p>What we need to do is to hold on to Go instances (so they don’t get prematurely Garbage-Collected by Go) and reference them from C by some ID.</p><p>A rather trivial way to do this is to use <a href="https://pkg.go.dev/sync#Map"><code class="language-plaintext highlighter-rouge">sync.Map</code></a>. We store instances as values, and use their pointer addresses as keys. Then we export constructor, destructor and accessor shim functions, and use <code class="language-plaintext highlighter-rouge">uintptr</code> as numeric IDs so we can refer to a particular instance from C/Java:</p><div class="language-go highlighter-rouge"><div class="code-header"> <span data-label-text="Go"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+</pre><td class="rouge-code"><pre><span class="k">var</span> <span class="n">objectsMap</span> <span class="n">sync</span><span class="o">.</span><span class="n">Map</span>
+
+<span class="c">//export jagors_new_reedsolomon</span>
+<span class="k">func</span> <span class="n">jagors_new_reedsolomon</span><span class="p">(</span><span class="n">numDataShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">,</span> <span class="n">numParityShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="kt">uintptr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">enc</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">reedsolomon</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="kt">int</span><span class="p">(</span><span class="n">numDataShards</span><span class="p">),</span> <span class="kt">int</span><span class="p">(</span><span class="n">numParityShards</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="m">0</span> <span class="c">// indicates error here</span>
+    <span class="p">}</span>
+    <span class="k">var</span> <span class="n">ptr</span> <span class="o">=</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">enc</span><span class="p">)</span>
+    <span class="n">objectsMap</span><span class="o">.</span><span class="n">Store</span><span class="p">(</span><span class="n">ptr</span><span class="p">,</span> <span class="n">enc</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kt">uintptr</span><span class="p">(</span><span class="n">ptr</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="c">//export jagors_delete</span>
+<span class="k">func</span> <span class="n">jagors_delete</span><span class="p">(</span><span class="n">objptr</span> <span class="kt">uintptr</span><span class="p">)</span> <span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+   <span class="n">_</span><span class="p">,</span> <span class="n">deleted</span> <span class="o">:=</span> <span class="n">objectsMap</span><span class="o">.</span><span class="n">LoadAndDelete</span><span class="p">(</span><span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">(</span><span class="n">objptr</span><span class="p">))</span>
+   
+   <span class="k">if</span> <span class="p">(</span><span class="n">deleted</span><span class="p">)</span> <span class="p">{</span>
+       <span class="k">return</span> <span class="m">1</span>
+   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+       <span class="k">return</span> <span class="m">0</span>
+   <span class="p">}</span> 
+<span class="p">}</span>
+
+<span class="k">func</span> <span class="n">GetReedSolomon</span><span class="p">(</span><span class="n">objptr</span> <span class="kt">uintptr</span><span class="p">)</span> <span class="p">(</span><span class="n">reedsolomon</span><span class="o">.</span><span class="n">Encoder</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">obj</span><span class="p">,</span> <span class="n">ok</span> <span class="o">:=</span> <span class="n">objectsMap</span><span class="o">.</span><span class="n">Load</span><span class="p">(</span><span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">(</span><span class="n">objptr</span><span class="p">))</span>
+    
+    <span class="k">if</span> <span class="p">(</span><span class="n">ok</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="p">(</span><span class="n">reedsolomon</span><span class="o">.</span><span class="n">Encoder</span><span class="p">),</span> <span class="no">nil</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="n">errors</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="s">"Unknown objptr"</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c">//export jagors_encode_rsid</span>
+<span class="k">func</span> <span class="n">jagors_encode_rsid</span><span class="p">(</span><span class="n">rsId</span> <span class="kt">uintptr</span><span class="p">,</span> <span class="n">buf</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">,</span> <span class="n">payloadWidth</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">,</span> <span class="n">numTotalShards</span> <span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">(</span><span class="n">C</span><span class="o">.</span><span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">var</span> <span class="n">shards</span> <span class="o">=</span> <span class="n">bufToShards</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">payloadWidth</span><span class="p">,</span> <span class="n">numTotalShards</span><span class="p">)</span>
+    <span class="k">var</span> <span class="n">enc</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">GetReedSolomon</span><span class="p">(</span><span class="n">rsId</span><span class="p">)</span> <span class="c">// changed</span>
+    
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="m">0</span>
+    <span class="p">}</span>
+    
+    <span class="n">err</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">Encode</span><span class="p">(</span><span class="n">shards</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="m">0</span>
+    <span class="p">}</span>
+    
+    <span class="k">return</span> <span class="m">1</span>
+<span class="p">}</span>
+
+<span class="c">// ... (jagors_decode_rsid similarly)</span>
+</pre></table></code></div></div><p>Now we clean up the Java side. We want to make sure that the Go <code class="language-plaintext highlighter-rouge">reedsolomon</code> instance is valid until our corresponding Java instance is no longer used. For this, we create a new class <code class="language-plaintext highlighter-rouge">JagoReedSolomon</code>, which is <code class="language-plaintext highlighter-rouge">AutoCloseable</code> and implements a Garbage Collection <code class="language-plaintext highlighter-rouge">Cleaner</code> for the case that someone forgets to <code class="language-plaintext highlighter-rouge">close()</code> the instance. The encode/decode operations are now methods of that class, and thus take fewer parameters.</p><div class="language-java highlighter-rouge"><div class="code-header"> <span data-label-text="Java"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+</pre><td class="rouge-code"><pre><span class="kn">import</span> <span class="nn">java.lang.foreign.MemorySegment</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.lang.ref.Cleaner</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.io.File</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">java.io.IOException</span><span class="o">;</span>
+<span class="kn">import</span> <span class="nn">org.example.ffm.libjagors_h</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">JagoReedSolomon</span> <span class="kd">implements</span> <span class="nc">AutoCloseable</span> <span class="o">{</span>
+  <span class="kd">static</span> <span class="o">{</span>
+	<span class="nc">System</span><span class="o">.</span><span class="na">load</span><span class="o">(</span><span class="k">new</span> <span class="nc">File</span><span class="o">(</span><span class="s">"./libjagors.dylib"</span><span class="o">).</span><span class="na">getAbsolutePath</span><span class="o">());</span>
+  <span class="o">}</span>
+  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="nc">Cleaner</span> <span class="n">cleaner</span> <span class="o">=</span> <span class="nc">Cleaner</span><span class="o">.</span><span class="na">create</span><span class="o">();</span>
+  
+  <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">numDataShards</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">numParityShards</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">numTotalShards</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kt">long</span> <span class="n">id</span><span class="o">;</span>
+
+  <span class="kd">private</span> <span class="kd">final</span> <span class="nc">CleanerState</span> <span class="n">state</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="kd">final</span> <span class="nc">Cleaner</span><span class="o">.</span><span class="na">Cleanable</span> <span class="n">cleanable</span><span class="o">;</span>
+
+  <span class="kd">public</span> <span class="nf">JagoReedSolomon</span><span class="o">(</span><span class="kt">int</span> <span class="n">numDataShards</span><span class="o">,</span> <span class="kt">int</span> <span class="n">numParityShards</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">id</span> <span class="o">=</span> <span class="n">libjagors_h</span><span class="o">.</span><span class="na">jagors_new_reedsolomon</span><span class="o">(</span><span class="n">numDataShards</span><span class="o">,</span> <span class="n">numParityShards</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalStateException</span><span class="o">(</span><span class="s">"jagors_new_reedsolomon"</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">state</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">CleanerState</span><span class="o">(</span><span class="n">id</span><span class="o">);</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">cleanable</span> <span class="o">=</span> <span class="n">cleaner</span><span class="o">.</span><span class="na">register</span><span class="o">(</span><span class="k">this</span><span class="o">,</span> <span class="n">state</span><span class="o">);</span>
+
+    <span class="k">this</span><span class="o">.</span><span class="na">numDataShards</span> <span class="o">=</span> <span class="n">numDataShards</span><span class="o">;</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">numParityShards</span> <span class="o">=</span> <span class="n">numParityShards</span><span class="o">;</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">numTotalShards</span> <span class="o">=</span> <span class="n">numDataShards</span> <span class="o">+</span> <span class="n">numParityShards</span><span class="o">;</span>
+  <span class="o">}</span>
+  
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">close</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">this</span><span class="o">.</span><span class="na">id</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="n">cleanable</span><span class="o">.</span><span class="na">clean</span><span class="o">();</span>
+  <span class="o">}</span>
+  
+  <span class="kd">private</span> <span class="kt">void</span> <span class="nf">checkClosed</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">id</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nf">IOException</span><span class="o">(</span><span class="s">"closed"</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>  
+  
+  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">CleanerState</span> <span class="kd">implements</span> <span class="nc">Runnable</span> <span class="o">{</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">long</span> <span class="n">id</span><span class="o">;</span>
+
+    <span class="nc">CleanerState</span><span class="o">(</span><span class="kt">long</span> <span class="n">id</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">id</span> <span class="o">=</span> <span class="n">id</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
+      <span class="n">libjagors_h</span><span class="o">.</span><span class="na">jagors_delete</span><span class="o">(</span><span class="n">id</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">encode</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">shards</span><span class="o">,</span> <span class="kt">int</span> <span class="n">payloadSize</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+    <span class="n">checkClosed</span><span class="o">();</span>
+    <span class="n">ensureShardSize</span><span class="o">(</span><span class="n">shards</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">rc</span> <span class="o">=</span> <span class="n">libjagors_h</span><span class="o">.</span><span class="na">jagors_encode_rsid</span><span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="n">shards</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">numTotalShards</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">rc</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+	   <span class="k">throw</span> <span class="k">new</span> <span class="nf">IOException</span><span class="o">(</span><span class="s">"encode"</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">decode</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">shards</span><span class="o">,</span> <span class="kt">int</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="nc">MemorySegment</span> <span class="n">shardsMissing</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+    <span class="n">checkClosed</span><span class="o">();</span>
+    <span class="n">ensureShardSize</span><span class="o">(</span><span class="n">shards</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">shardsMissing</span><span class="o">.</span><span class="na">byteSize</span><span class="o">()</span> <span class="o">&lt;</span> <span class="n">numTotalShards</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nf">IOException</span><span class="o">(</span><span class="s">"shardsMissing too small"</span><span class="o">);</span>
+    <span class="o">}</span>
+    <span class="kt">int</span> <span class="n">rc</span> <span class="o">=</span> <span class="n">libjagors_h</span><span class="o">.</span><span class="na">jagors_decode_rsid</span><span class="o">(</span><span class="n">id</span><span class="o">,</span> <span class="n">shards</span><span class="o">,</span> <span class="n">payloadSize</span><span class="o">,</span> <span class="n">numTotalShards</span><span class="o">,</span> <span class="n">shardsMissing</span><span class="o">);</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">rc</span> <span class="o">==</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+	   <span class="k">throw</span> <span class="k">new</span> <span class="nf">IOException</span><span class="o">(</span><span class="s">"decode"</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+  
+  <span class="kd">private</span> <span class="kt">void</span> <span class="nf">ensureShardSize</span><span class="o">(</span><span class="nc">MemorySegment</span> <span class="n">shards</span><span class="o">,</span> <span class="kt">int</span> <span class="n">payloadSize</span><span class="o">)</span> <span class="kd">throws</span> <span class="nc">IOException</span> <span class="o">{</span>
+    <span class="k">if</span> <span class="o">(</span><span class="n">shards</span><span class="o">.</span><span class="na">byteSize</span><span class="o">()</span> <span class="o">&lt;</span> <span class="n">payloadSize</span> <span class="o">*</span> <span class="n">numTotalShards</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">throw</span> <span class="k">new</span> <span class="nf">IOException</span><span class="o">(</span><span class="s">"shards too small"</span><span class="o">);</span>
+    <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</pre></table></code></div></div><p>I’ll leave the changed test class out here for brevity.</p><p>Note that for production code, you will want to move the <code class="language-plaintext highlighter-rouge">static</code> parts (<code class="language-plaintext highlighter-rouge">System.load</code> and <code class="language-plaintext highlighter-rouge">Cleaner.create</code>) to a separate <code class="language-plaintext highlighter-rouge">LibraryLoader</code> class that picks up the right shared library for your architecture, probably packed up directly in a jar on the classpath. This can get hairy quickly, because you have to build and bundle native libraries for all architectures. As a limitation of <code class="language-plaintext highlighter-rouge">dlopen(3)</code> we also can’t load a native library directly from a jar, so logic for temporarily unpacking has to be added too. See what <a href="https://github.com/kohlschutter/junixsocket/">junixsocket</a> <a href="https://github.com/kohlschutter/junixsocket/blob/junixsocket-2.10.1/junixsocket-common/src/main/java/org/newsclub/net/unix/NativeLibraryLoader.java">does</a>, for example.</p><p>Speaking of production: you should also review any calls to <code class="language-plaintext highlighter-rouge">panic</code> on the Go side — these will most definitely take down your entire JVM unless handled correctly. One way to address this is to call a special Go-panic handler at the beginning of every shim method:</p><div class="language-go highlighter-rouge"><div class="code-header"> <span data-label-text="Go"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+</pre><td class="rouge-code"><pre><span class="k">func</span> <span class="n">panicProtect</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="n">err</span> <span class="o">:=</span> <span class="nb">recover</span><span class="p">();</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">Println</span><span class="p">(</span><span class="s">"Panic: "</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span> <span class="c">// needs "log" in the imports section</span>
+        <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c">//export jagors_something</span>
+<span class="k">func</span> <span class="n">jagors_something</span><span class="p">(</span><span class="o">...</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">defer</span> <span class="n">panicProtect</span><span class="p">()</span>
+    <span class="c">// ...</span>
+<span class="p">}</span>
+</pre></table></code></div></div><p>This will cause the <code class="language-plaintext highlighter-rouge">panic</code> to be logged, and the function returns with a <code class="language-plaintext highlighter-rouge">0</code> value. This is why, unlike C, we return <code class="language-plaintext highlighter-rouge">0</code> for error and non-zero for success.</p><h1 id="results">Results</h1><p>Not only Klaus Post’s Go code but also Backblaze’s JavaReedSolomon comes with a <a href="https://github.com/Backblaze/JavaReedSolomon/blob/d3c481dc69471e0c47ff6f67f33d53bde941675e/src/main/java/com/backblaze/erasure/ReedSolomonBenchmark.java">benchmarking class</a>. It tests a variety of combinations for the coding loop — an internal detail that may distract anybody new to the codebase (the actual code uses the fastest variant, <code class="language-plaintext highlighter-rouge">InputOutputByteTableCodingLoop</code>).</p><p>For testing our Go/Java combination, we will reuse and adapt Backblaze’s benchmarking class.</p><h2 id="benchmarking-caveats"><span class="mr-2">Benchmarking caveats</span><a href="#benchmarking-caveats" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>I mentioned there’s some discrepancy in benchmarking between the Java and Go implementations, and this comes as a cautionary tale.</p><p>First of all, Backblaze’s code does not take parity shards into account when calculating throughput in MB/s, but Klaus’ Go code does (so it appears ca. 15% faster with 17+3 shards). For fairness, we should account all memory accesses for throughput, so I amended BackBlaze’s code accordingly (also see <a href="https://github.com/Backblaze/JavaReedSolomon/pull/28">here</a>).</p><p>More importantly, Backblaze measures validating the entire matrix (“isParityCorrect”) whereas the Go benchmark only runs “Recover” on a random set of corrupted shards in the amount of the number of parity shards. The latter operation is just faster because it touches fewer places in RAM (note the higher MB/s for “Repaired” at the beginning of this article). I made a <a href="https://github.com/klauspost/reedsolomon/commit/bc3dc6f38f767fc7cf8a0a5f4bb68d6f544f2918">simple fix</a>, so we can compare both validation operations.</p><p>In principle, validating should be equally fast as creating the parity. One just needs to compute the parity shards and verify that they match the previously stored parity.</p><p>Surprisingly, Klaus’ Go implementation yields lower throughtput numbers for true verification than Backblaze’s code, and that is most likely due to some extra allocation that happens in that code path (this can easily be fixed).</p><p>Temporary allocations and copying data back-and-forth are two major culprits for performance degradations (the more so in garbage-collected systems) — avoid them wherever possible.</p><p>In light of these findings, my benchmarks will focus on the numbers for <em>encoding</em>.</p><h2 id="go-scheduler-woes"><span class="mr-2">Go scheduler woes</span><a href="#go-scheduler-woes" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>The first benchmark results I got were in fact <em>too good</em>.</p><p>Even when running code single-threaded on the Java side, the Go code would run on multiple CPUs. Depending on the payload size either only 4 or all 10 cores were running, resulting in 26867 MB/s (200k payload) and 48415 MB/s (10M payload).</p><p>The reason for this is the Go scheduler. All calls from Java to Go are subject to Go’s scheduling policies (set via <code class="language-plaintext highlighter-rouge">runtime.GOMAXPROCS</code>). Go is using all cores by default for go routines. Consequently, if Go’s scheduler is capped to 1 core instead, then even 100 threads on the Java side would have to queue their calls for that single core on the Go side.</p><p>To control the scheduler, we can add the following shim method, and call it on the Java side to suit our needs:</p><div class="language-go highlighter-rouge"><div class="code-header"> <span data-label-text="Go"><i class="fas fa-code small"></i></span> <button aria-label="copy" data-title-succeed="Copied!"><i class="far fa-clipboard"></i></button></div><div class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre><td class="rouge-code"><pre><span class="c">//export jagors_set_maxprocs</span>
+<span class="k">func</span> <span class="n">jagors_set_maxprocs</span><span class="p">(</span><span class="n">maxProcs</span> <span class="kt">int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">runtime</span><span class="o">.</span><span class="n">GOMAXPROCS</span><span class="p">(</span><span class="n">maxProcs</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></table></code></div></div><p>Fine-tuning this parameter is probably not necessary; being able to rely on the Go scheduler simplifies the Java code. However, there are two exceptions:</p><p>First, by limiting the scheduler to 1 CPU core, we can verify that our benchmark results are actually comparable to what Klaus Post’s benchmark code reports, and yes, we’re getting practically the same numbers — without assembly: 200k payloads yield 1105 MB/s (0.89x), 10M yield 694 MB/s (1.02x), with assembly: 200k payloads yield 11532 MB/s (0.94x), 10M yield 8959 MB/s (0.8x).</p><p>Second, when we want to squeeze out the last bit of performance, we max out the number of threads on the Java side <em>and</em> on the Go side. This yielded 59920 MB/s for 200k payloads (4.9x faster than native Go) and 52028 MB/s (1.1x), all with the 17+3 partitioning.</p><p>These results indicate that there is little room for improvement for our Java-Go bridge; it works well. We see a significant performance gain compared to the native Go benchmarks when it comes to smaller payloads — this is most likely attributable to the Go scheduler not using all available CPU cores.</p><h2 id="the-real-numbers"><span class="mr-2">The real numbers</span><a href="#the-real-numbers" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h2><p>OK, so we were benchmarking quite a few things. What counts the most for Java users is the final improvement over Backblaze’s vanilla Java that the assembly optimization brings us (all measured on an MacBook Pro M1 Max):</p><h3 id="single-threaded-javago"><span class="mr-2">Single-threaded Java/Go</span><a href="#single-threaded-javago" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>For payloads of 200k: 11x faster.<br /> For payloads of 10MB: 9x faster.</p><h3 id="all-cpus-multi-threaded-java-and-go-code"><span class="mr-2">All CPUs (multi-threaded Java and Go code)</span><a href="#all-cpus-multi-threaded-java-and-go-code" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>For payloads of 200k: 7.6x faster.<br /> For payloads of 10MB: 6.9x faster.</p><h3 id="single-threaded-java-code-full-multithreading-via-go-scheduler"><span class="mr-2">Single-threaded Java code; full multithreading via Go scheduler</span><a href="#single-threaded-java-code-full-multithreading-via-go-scheduler" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>For payloads of 200k: 26x faster.<br /> For payloads of 10MB: 53x faster.</p><h3 id="the-fastest-throughtput-numbers-i-got"><span class="mr-2">The fastest throughtput numbers I got</span><a href="#the-fastest-throughtput-numbers-i-got" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>Around 95,000 MB/s. 10MB payload, 5+2 shards.</p><h3 id="are-the-returned-numbers-the-same"><span class="mr-2">Are the returned numbers the same?</span><a href="#are-the-returned-numbers-the-same" class="anchor text-muted"><i class="fas fa-hashtag"></i></a></h3><p>Regarding the actual calculations both implementations perform: Yes, they return the same results, which is quite important.</p><h1 id="conclusions-and-outlook">Conclusions and Outlook</h1><p>You’ve learned a little about Reed-Solomon, and how to run some native Go code from Java, in the same POSIX process as the Java Virtual Machine.</p><p>This article shows that the language barrier between Go and Java is surmountable, and specifically without compromising performance.</p><p>We can now derive benefit from Klaus Post’s significant improvements and easily adapt his contributions for the JVM ecosystem where it all started.</p><p>Modern CPUs have amazing vectorization capabilities that are presently underutilized by traditional programming techniques.</p><p>Looking ahead, Java’s <a href="https://www.baeldung.com/java-vector-api">Vector API</a> will eventually leave the <a href="https://openjdk.org/jeps/508">incubation stage</a>, giving users a portable alternative over optimized assembly. I’m curious how well such a modernized Java solution will perform.</p><p>What performance gains do you see with different sharding parameters and on platforms with AVX512 (AMD Zen 5 anyone?) or SVE (e.g., Apple M4)? Will <a href="https://api-depositonce.tu-berlin.de/server/api/core/bitstreams/e1d8ee37-b71e-46e7-90a4-8a15eb5d00ce/content">better</a> <a href="https://cr.openjdk.org/~vlivanov/talks/2017_Vectorization_in_HotSpot_JVM.pdf">auto-vectorization</a> save the day?</p><p>The full code (with separate commits for each step) is available <a href="https://github.com/kohlschuetter/jagors-tutorial/">in this repository</a>.</p><p>Lastly, what will you make of all of this? Please comment below!</p></div><div class="post-tail-wrapper text-muted"><div class="post-meta mb-3"> <i class="far fa-folder-open fa-fw mr-1"></i> <a href='/blog/categories/java/'>Java</a></div><div class="post-tags"> <i class="fa fa-tags fa-fw mr-1"></i> <a href="/blog/tags/java/" class="post-tag no-text-decoration" >java</a> <a href="/blog/tags/go/" class="post-tag no-text-decoration" >go</a> <a href="/blog/tags/performance/" class="post-tag no-text-decoration" >performance</a> <a href="/blog/tags/tutorial/" class="post-tag no-text-decoration" >tutorial</a> <a href="/blog/tags/ffm/" class="post-tag no-text-decoration" >ffm</a> <a href="/blog/tags/reed-solomon/" class="post-tag no-text-decoration" >reed-solomon</a></div><div class="post-tail-bottom d-flex justify-content-between align-items-center mt-3 pt-5 pb-2"><div class="license-wrapper"></div><div class="share-wrapper"> <span class="share-label text-muted mr-1">Share</span> <span class="share-icons"> <a href="https://twitter.com/intent/tweet?text=Faster+Reed-Solomon+Erasure+Coding+in+Java+with+Go+%26+FFM&url=https%3A%2F%2Fkohlschuetter.github.io%2Fblog%2Fposts%2F2025%2F08%2F11%2Fjagors%2F" data-toggle="tooltip" data-placement="top" title="Twitter" target="_blank" rel="noopener" aria-label="Twitter"> <i class="fa-fw fab fa-twitter"></i> </a> <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fkohlschuetter.github.io%2Fblog%2Fposts%2F2025%2F08%2F11%2Fjagors%2F" data-toggle="tooltip" data-placement="top" title="Linkedin" target="_blank" rel="noopener" aria-label="Linkedin"> <i class="fa-fw fab fa-linkedin"></i> </a> <i id="copy-link" class="fa-fw fas fa-link small" data-toggle="tooltip" data-placement="top" title="Copy link" data-title-succeed="Link copied successfully!"> </i> </span></div></div></div></div></div><div id="panel-wrapper" class="col-xl-3 pl-2 text-muted"><div class="access"><div id="access-lastmod" class="post"><div class="panel-heading">Recently Updated</div><ul class="post-content pl-0 pb-1 ml-1 mt-2"><li><a href="/blog/posts/2026/03/22/unlock25/">Unlocking 25 Gigabit/s on 10 GbE Direct Attach Copper</a></ul></div><div id="access-tags"><div class="panel-heading">Trending Tags</div><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/blog/tags/linux/">linux</a> <a class="post-tag" href="/blog/tags/performance/">performance</a> <a class="post-tag" href="/blog/tags/iperf3/">iperf3</a> <a class="post-tag" href="/blog/tags/iperf/">iperf</a> <a class="post-tag" href="/blog/tags/networking/">networking</a> <a class="post-tag" href="/blog/tags/java/">java</a> <a class="post-tag" href="/blog/tags/kernel/">kernel</a> <a class="post-tag" href="/blog/tags/macos/">macos</a> <a class="post-tag" href="/blog/tags/perplexity/">perplexity</a> <a class="post-tag" href="/blog/tags/af-tipc/">af_tipc</a></div></div></div><script src="/blog/assets/lib/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><div id="toc-wrapper" class="pl-0 pr-4 mb-5"><div class="panel-heading pl-3 pt-2 mb-2">Contents</div><nav id="toc" data-toggle="toc"></nav></div></div></div><div class="row"><div id="tail-wrapper" class="col-12 col-lg-11 col-xl-9 pl-3 pr-3 pr-xl-4"><div id="ck-gisus-wrapper"></div><script type="text/javascript"> window.addEventListener('DOMContentLoaded', function() { (function($) { $(function () { const origin = "https://giscus.app"; const iframe = "iframe.giscus-frame"; const lightTheme = "light"; const darkTheme = "dark_dimmed"; let initTheme = lightTheme; if ($("html[data-mode=dark]").length > 0 || ($("html[data-mode]").length == 0 && window.matchMedia("(prefers-color-scheme: dark)").matches)) { initTheme = darkTheme; } let giscusAttributes = { "src": "https://giscus.app/client.js", "data-repo": "kohlschuetter/blog", "data-repo-id": "R_kgDOH6GXcw", "data-category": "Giscus", "data-category-id": "DIC_kwDOH6GXc84CRIo2", "data-mapping": "pathname", "data-reactions-enabled": "1", "data-emit-metadata": "0", "data-theme": initTheme, "data-input-position": "bottom", "data-lang": "en", "crossorigin": "anonymous", "async": "" }; let giscusScript = document.createElement("script"); Object.entries(giscusAttributes).forEach(([key, value]) => giscusScript.setAttribute(key, value)); document.getElementById("ck-gisus-wrapper").appendChild(giscusScript); addEventListener("message", (event) => { if (event.source === window && event.data && event.data.direction === ModeToggle.ID) { /* global theme mode changed */ const mode = event.data.message; const theme = (mode === ModeToggle.DARK_MODE ? darkTheme : lightTheme); const message = { setConfig: { theme: theme } }; const giscus = document.querySelector(iframe).contentWindow; giscus.postMessage({ giscus: message }, origin); } }); }); })(jQuery); }); </script><div id="related-posts" class="mt-5 mb-2 mb-sm-4"><h3 class="pt-2 mt-1 mb-4 ml-1" data-toc-skip>Further Reading</h3><div class="card-deck mb-4"><div class="card"> <a href="/blog/posts/2026/01/27/tb25/"><div class="card-body"> <em class="small" data-ts="1769508000" data-df="ll" > Jan 27, 2026 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Reliable 25 Gigabit Ethernet via Thunderbolt</h3><div class="text-muted small"><p> I stumbled upon this tiny Thunderbolt to 25 Gigabit Ethernet adapter on Amazon. It’s powered from the host, meaning there is only one cable, no additional power supply required. This is great for mobile setups and desktop work alike. The device comes in a nice travel pouch along with a rather sh...</p></div></div></a></div><div class="card"> <a href="/blog/posts/2026/03/22/unlock25/"><div class="card-body"> <em class="small" data-ts="1774173600" data-df="ll" > Mar 22, 2026 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Unlocking 25 Gigabit/s on 10 GbE Direct Attach Copper</h3><div class="text-muted small"><p> This is my story of devising a fix that saved me a bunch of money, letting me keep existing gear and learning a lot about cabling along the way. From my previous post you may have gathered that I’m running a homelab setup involving 25 Gigabit Ethernet. As most of my setup was still 10 Gigabit/s...</p></div></div></a></div><div class="card"> <a href="/blog/posts/2026/04/28/rtl10/"><div class="card-body"> <em class="small" data-ts="1777363200" data-df="ll" > Apr 28, 2026 </em><h3 class="pt-0 mt-1 mb-3" data-toc-skip>Realtek's 10GbE RJ45 NIC performance revisited</h3><div class="text-muted small"><p> Even in 2026, ordinary desktop computers regularly ship with measly 1 Gigabit built-in Ethernet ports, 2.5 Gbps if you’re lucky, and maybe 5 Gbps only if the manufacturer is optimizing for tech spec bingo. Maybe it’s because these speeds are “just enough” for the masses? What if you wanted fast...</p></div></div></a></div></div></div><div class="post-navigation d-flex justify-content-between"> <a href="/blog/posts/2025/03/06/alpine-linux-glusterfs/" class="btn btn-outline-primary" prompt="Older"><p>AI slop meets Google, or "How to Really Install GlusterFS on Alpine Linux Latest"</p></a> <a href="/blog/posts/2026/01/27/tb25/" class="btn btn-outline-primary" prompt="Newer"><p>Reliable 25 Gigabit Ethernet via Thunderbolt</p></a></div></div></div><footer class="row pl-3 pr-3"><div class="col-12 d-flex justify-content-between align-items-center text-muted pl-0 pr-0"><div class="footer-left"><p class="mb-0"> © 2026 <a href="https://twitter.com/kohlschuetter">Christian Kohlschütter</a>.</p></div><div class="footer-right"><p class="mb-0"> Powered by <a href="https://jekyllrb.com" target="_blank" rel="noopener">Jekyll</a> with <a href="https://github.com/cotes2020/jekyll-theme-chirpy" target="_blank" rel="noopener">Chirpy</a> theme.</p></div></div></footer></div><div id="search-result-wrapper" class="d-flex justify-content-center unloaded"><div class="col-12 col-sm-11 post-content"><div id="search-hints"><div id="access-tags"><div class="panel-heading">Trending Tags</div><div class="d-flex flex-wrap mt-3 mb-1 mr-3"> <a class="post-tag" href="/blog/tags/linux/">linux</a> <a class="post-tag" href="/blog/tags/performance/">performance</a> <a class="post-tag" href="/blog/tags/iperf3/">iperf3</a> <a class="post-tag" href="/blog/tags/iperf/">iperf</a> <a class="post-tag" href="/blog/tags/networking/">networking</a> <a class="post-tag" href="/blog/tags/java/">java</a> <a class="post-tag" href="/blog/tags/kernel/">kernel</a> <a class="post-tag" href="/blog/tags/macos/">macos</a> <a class="post-tag" href="/blog/tags/perplexity/">perplexity</a> <a class="post-tag" href="/blog/tags/af-tipc/">af_tipc</a></div></div></div><div id="search-results" class="d-flex flex-wrap justify-content-center text-muted mt-3"></div></div></div></div><div id="mask"></div><a id="back-to-top" href="#" aria-label="back-to-top" class="btn btn-lg btn-box-shadow" role="button"> <i class="fas fa-angle-up"></i> </a> <script src="/blog/assets/lib/simple-jekyll-search-1.10.0/simple-jekyll-search.min.js"></script> <script> SimpleJekyllSearch({ searchInput: document.getElementById('search-input'), resultsContainer: document.getElementById('search-results'), json: '/blog/assets/js/data/search.json', searchResultTemplate: '<div class="pl-1 pr-1 pl-sm-2 pr-sm-2 pl-lg-4 pr-lg-4 pl-xl-0 pr-xl-0"> <a href="{url}">{title}</a><div class="post-meta d-flex flex-column flex-sm-row text-muted mt-1 mb-1"> {categories} {tags}</div><p>{snippet}</p></div>', noResultsText: '<p class="mt-5">No matching results found.</p>', templateMiddleware: function(prop, value, template) { if (prop === 'categories') { if (value === '') { return `${value}`; } else { return `<div class="mr-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`; } } if (prop === 'tags') { if (value === '') { return `${value}`; } else { return `<div><i class="fa fa-tag fa-fw"></i>${value}</div>`; } } } }); </script> <script src="/blog/assets/lib/magnific-popup-1.1.0/jquery.magnific-popup.min.js"></script> <script src="/blog/assets/lib/lozad-1.16.0/lozad.min.js"></script> <script src="/blog/assets/lib/clipboard-2.0.9/clipboard.min.js"></script> <script src="/blog/assets/lib/dayjs-1.10.7/dayjs.min.js"></script> <script src="/blog/assets/lib/dayjs-1.10.7/locale/en.min.js"></script> <script src="/blog/assets/lib/dayjs-1.10.7/plugin/relativeTime.min.js"></script> <script src="/blog/assets/lib/dayjs-1.10.7/plugin/localizedFormat.min.js"></script> <script defer src="/blog/assets/js/dist/post.min.js"></script> <script src="/blog/assets/lib/bootstrap-4.6.1/bootstrap.bundle.min.js"></script> <script defer src="/blog/unregister.js"></script>
